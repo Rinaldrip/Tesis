@@ -1,0 +1,287 @@
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import {
+    Form,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormControl,
+    FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { CalendarEvent } from "./Calender";
+
+interface EventFormValues {
+    title: string;
+    description: string;
+    start_date: string;
+    start_time: string;
+    end_date: string;
+    end_time: string;
+    category: CalendarEvent["category"];
+}
+
+interface EventModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (event: Omit<CalendarEvent, "id">) => void;
+    onDelete?: () => void;
+    event?: CalendarEvent | null;
+    initialDate?: Date;
+}
+
+export default function EventModal({
+    isOpen,
+    onClose,
+    onSave,
+    onDelete,
+    event,
+    initialDate,
+}: EventModalProps) {
+    const form = useForm<EventFormValues>({
+        defaultValues: {
+            title: "",
+            description: "",
+            start_date: "",
+            start_time: "",
+            end_date: "",
+            end_time: "",
+            category: "other",
+        },
+    });
+
+    // Cargar datos en modo edición o crear evento nuevo
+    useEffect(() => {
+        if (event) {
+            const startDate = new Date(event.start_date);
+            const endDate = new Date(event.end_date);
+
+            form.reset({
+                title: event.title,
+                description: event.description,
+                start_date: startDate.toISOString().split("T")[0],
+                start_time: startDate.toTimeString().slice(0, 5),
+                end_date: endDate.toISOString().split("T")[0],
+                end_time: endDate.toTimeString().slice(0, 5),
+                category: event.category,
+            });
+        } else if (initialDate) {
+            const d = initialDate.toISOString().split("T")[0];
+
+            form.reset({
+                title: "",
+                description: "",
+                start_date: d,
+                start_time: "08:00",
+                end_date: d,
+                end_time: "09:00",
+                category: "other",
+            });
+        } else {
+            form.reset();
+        }
+    }, [event, initialDate, isOpen]);
+
+    const submitForm = (data: EventFormValues) => {
+        const start = new Date(`${data.start_date}T${data.start_time}`);
+        const end = new Date(`${data.end_date}T${data.end_time}`);
+
+        onSave({
+            title: data.title,
+            description: data.description,
+            start_date: start.toISOString(),
+            end_date: end.toISOString(),
+            category: data.category,
+        });
+
+        form.reset();
+    };
+
+    const handleClose = () => {
+        form.reset();
+        onClose();
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={handleClose}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="text-[#0A1733] text-xl">
+                        {event ? "Edit Event" : "Add New Event"}
+                    </DialogTitle>
+                </DialogHeader>
+
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(submitForm)} className="space-y-6">
+                        {/* Información general */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
+                                Event Information
+                            </h3>
+
+                            <div className="grid grid-cols-1 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="title"
+                                    rules={{ required: "Title is required" }}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Title *</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Event title" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="category"
+                                    rules={{ required: "Category required" }}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Category *</FormLabel>
+                                            <FormControl>
+                                                <select
+                                                    {...field}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                                >
+                                                    <option value="hemodialysis">Hemodialysis</option>
+                                                    <option value="peritoneal_dialysis">Peritoneal Dialysis</option>
+                                                    <option value="controls">Controls / Follow-ups</option>
+                                                    <option value="emergencies">Emergencies</option>
+                                                    <option value="other">Other Tasks</option>
+                                                </select>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Fechas y horas */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
+                                Schedule
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="start_date"
+                                    rules={{ required: "Required" }}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Start Date *</FormLabel>
+                                            <FormControl>
+                                                <Input type="date" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="start_time"
+                                    rules={{ required: "Required" }}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Start Time *</FormLabel>
+                                            <FormControl>
+                                                <Input type="time" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="end_date"
+                                    rules={{ required: "Required" }}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>End Date *</FormLabel>
+                                            <FormControl>
+                                                <Input type="date" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="end_time"
+                                    rules={{ required: "Required" }}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>End Time *</FormLabel>
+                                            <FormControl>
+                                                <Input type="time" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Descripción */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
+                                Additional Notes
+                            </h3>
+
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Description</FormLabel>
+                                        <FormControl>
+                                            <textarea
+                                                {...field}
+                                                rows={4}
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                                placeholder="Optional notes"
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex justify-between pt-4 border-t">
+                            {event && onDelete && (
+                                <Button
+                                    type="button"
+                                    className="bg-red-600 text-white hover:bg-red-700"
+                                    onClick={onDelete}
+                                >
+                                    Delete Event
+                                </Button>
+                            )}
+
+                            <div className="flex gap-3 ml-auto">
+                                <Button type="button" variant="outline" onClick={handleClose}>
+                                    Cancel
+                                </Button>
+
+                                <Button type="submit" className="bg-[#0A1733] text-white hover:bg-[#12204d]">
+                                    {event ? "Update Event" : "Create Event"}
+                                </Button>
+                            </div>
+                        </div>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}

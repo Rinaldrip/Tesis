@@ -1,0 +1,175 @@
+-- 1. Tabla pacientes
+CREATE TABLE pacientes (
+    cedula BIGINT PRIMARY KEY,
+    nombre VARCHAR(100),
+    apellido VARCHAR(100),
+    telefono VARCHAR(20),
+    fecha_nacimiento DATE,
+    lugar_nacimiento VARCHAR(100),
+    direccion TEXT,
+    estado VARCHAR(10) DEFAULT 'Activo',
+    sexo BOOLEAN,
+    etnia VARCHAR(15)
+);
+
+-- 2. Tabla datos_ingreso
+CREATE TABLE datos_ingreso (
+    cedula_paciente BIGINT PRIMARY KEY REFERENCES pacientes(cedula) ON DELETE CASCADE,
+    fecha_ingreso DATE,
+    fecha_egreso DATE,
+    etiologia_enfermedad_renal TEXT,
+    causa_egreso TEXT,
+    peso_ingreso_kg DECIMAL(5,2),
+    talla_cm DECIMAL(5,2),
+    volumen_residual_cc DECIMAL(6,2)
+);
+
+-- 3. Tabla datos_medicos
+CREATE TABLE datos_medicos (
+    cedula_paciente BIGINT PRIMARY KEY REFERENCES pacientes(cedula) ON DELETE CASCADE,
+    hipertension_arterial BOOLEAN,
+    tiempo_diagnostico DATE,
+    tratamiento_hipertension TEXT,
+    diabetes VARCHAR(10) DEFAULT NULL,
+    tipo_dialisis VARCHAR(50),
+    turno VARCHAR(10),
+    vih BOOLEAN,
+    vdrl BOOLEAN,
+    hbsag BOOLEAN,
+    anticore BOOLEAN,
+    hc BOOLEAN,
+    covid19 BOOLEAN
+);
+
+-- 4. Tabla contactos_emergencia
+CREATE TABLE contactos_emergencia (
+    cedula_paciente BIGINT PRIMARY KEY REFERENCES pacientes(cedula) ON DELETE CASCADE
+    nombre VARCHAR(100),
+    telefono VARCHAR(20),
+    parentesco VARCHAR(50)
+);
+
+-- 5. Tabla accesos_vasculares
+CREATE TABLE accesos_vasculares (
+    cedula_paciente BIGINT PRIMARY KEY REFERENCES pacientes(cedula) ON DELETE CASCADE
+    tipo VARCHAR(50),
+    fecha_realizada DATE,
+    ubicacion VARCHAR(100)
+);
+
+-- 6. Tabla laboratorios
+CREATE TABLE laboratorios (
+    id SERIAL PRIMARY KEY,
+    cedula_paciente BIGINT REFERENCES pacientes(cedula) ON DELETE CASCADE,
+    fecha DATE,
+    hb DECIMAL(5,2),
+    hto DECIMAL(5,2),
+    plt INTEGER,
+    gb DECIMAL(8,2),
+    neut DECIMAL(5,2),
+    linf DECIMAL(5,2),
+    eos DECIMAL(5,2),
+    glicemia DECIMAL(6,2),
+    urea DECIMAL(6,2),
+    creatinina DECIMAL(6,2),
+    proteinas_t DECIMAL(6,2),
+    albumina DECIMAL(6,2),
+    globulinas DECIMAL(6,2),
+    colesterol DECIMAL(6,2),
+    trigliceridos DECIMAL(6,2),
+    ac_urico DECIMAL(6,2),
+    tgo INTEGER,
+    tgp INTEGER,
+    bt DECIMAL(5,2),
+    bd DECIMAL(5,2),
+    bi DECIMAL(5,2),
+    na DECIMAL(5,2),
+    k DECIMAL(5,2),
+    cl DECIMAL(5,2),
+    ca DECIMAL(5,2),
+    p DECIMAL(5,2),
+    mg DECIMAL(5,2),
+    pt DECIMAL(5,2),
+    ptt DECIMAL(5,2)
+);
+
+-- 7. Tabla examenes_orina
+CREATE TABLE examenes_orina (
+    id SERIAL PRIMARY KEY,
+    cedula_paciente BIGINT REFERENCES pacientes(cedula) ON DELETE CASCADE,
+    fecha DATE,
+    ph DECIMAL(3,1),
+    proteinas VARCHAR(50),
+    hemoglobina BOOLEAN,
+    glucosa VARCHAR(50),
+    leuco INTEGER,
+    hematies INTEGER,
+    celulas INTEGER,
+    bacterias BOOLEAN
+);
+
+-- 8. Tabla ordenes_medicas
+CREATE TABLE ordenes_medicas (
+    id SERIAL PRIMARY KEY,
+    cedula_paciente BIGINT REFERENCES pacientes(cedula) ON DELETE CASCADE,
+    fecha TIMESTAMP,
+    orden TEXT
+);
+
+-- 9. Tabla evoluciones
+CREATE TABLE evoluciones (
+    id SERIAL PRIMARY KEY,
+    cedula_paciente BIGINT REFERENCES pacientes(cedula) ON DELETE CASCADE,
+    fecha TIMESTAMP,
+    evolucion TEXT
+);
+
+-- 10. Tabla tratamientos
+CREATE TABLE tratamientos (
+    id SERIAL PRIMARY KEY,
+    cedula_paciente BIGINT REFERENCES pacientes(cedula) ON DELETE CASCADE,
+    fecha TIMESTAMP,
+    tratamiento TEXT
+);
+
+CREATE TABLE especialistas (
+    cedula VARCHAR(20) PRIMARY KEY,
+    full_name VARCHAR(100) NOT NULL,
+    date_of_birth DATE NOT NULL,
+    specialty VARCHAR(100),
+    graduation_year INTEGER NOT NULL,
+    university VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    phone VARCHAR(20) NOT NULL,
+    num_colegio VARCHAR(10) NOT NULL UNIQUE,
+    num_mpps VARCHAR(10) NOT NULL UNIQUE,
+    direction TEXT);
+
+CREATE TABLE calendar_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    start_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    category VARCHAR(50) NOT NULL);
+
+CREATE TABLE usuarios (
+    usuario VARCHAR(50) PRIMARY KEY NOT NULL,
+    contraseña VARCHAR(200) NOT NULL,
+    pregunta_seguridad VARCHAR(255) NOT NULL,
+    respuesta_seguridad VARCHAR(255) NOT NULL
+);
+
+
+-- ÍNDICES para mejorar performance
+CREATE INDEX idx_laboratorios_cedula_fecha ON laboratorios(cedula_paciente, fecha DESC);
+CREATE INDEX idx_examenes_orina_cedula_fecha ON examenes_orina(cedula_paciente, fecha DESC);
+CREATE INDEX idx_ordenes_medicas_cedula_fecha ON ordenes_medicas(cedula_paciente, fecha DESC);
+CREATE INDEX idx_evoluciones_cedula_fecha ON evoluciones(cedula_paciente, fecha DESC);
+CREATE INDEX idx_tratamientos_cedula_fecha ON tratamientos(cedula_paciente, fecha DESC);
+CREATE INDEX idx_contactos_emergencia_cedula ON contactos_emergencia(cedula_paciente);
+CREATE INDEX idx_accesos_vasculares_cedula ON accesos_vasculares(cedula_paciente);
+
+-- PERMISOS para nefro_user
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO nefro_user;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nefro_user;

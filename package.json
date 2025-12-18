@@ -1,0 +1,36 @@
+{
+  "name": "nefro-sistema-completo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "electron"
+  ],
+  "scripts": {
+    "dev": "npm run dev:backend & npm run dev:frontend & npm run dev:electron",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:electron": "wait-on http://localhost:4000 && wait-on http://localhost:5173 && cd electron && npm start",
+    
+    "build": "npm run build:frontend && npm run build:backend && npm run build:electron",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm install --production",
+    "build:electron": "cd electron && npm run build",
+    
+    "package:win": "npm run build && cd electron && npm run package:win",
+    "package:mac": "npm run build && cd electron && npm run package:mac",
+    "package:linux": "npm run build && cd electron && npm run package:linux",
+    
+    "clean": "rimraf frontend/dist backend/node_modules electron/node_modules",
+    "clean:all": "npm run clean && rimraf node_modules package-lock.json",
+    
+    "postinstall": "npm install --prefix frontend && npm install --prefix backend && npm install --prefix electron"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "wait-on": "^7.0.1",
+    "rimraf": "^5.0.5",
+    "cross-env": "^7.0.3"
+  }
+}
