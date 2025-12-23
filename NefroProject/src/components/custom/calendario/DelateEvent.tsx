@@ -24,12 +24,12 @@ export default function ConfirmDeleteModal({
                             <AlertTriangle className="text-red-600" size={26} />
                         </div>
                         <h2 className="text-2xl font-semibold text-[#0A1A2F]">
-                            Confirm Deletion
+                            Confirmar Eliminación
                         </h2>
                     </div>
 
                     <p className="text-gray-700 mb-2">
-                        Are you sure you want to delete this event?
+                        ¿Estás seguro de que quieres eliminar este evento?
                     </p>
 
                     <p className="text-[#0A1A2F] font-semibold mb-6 border-l-4 border-[#D4AF37] pl-3">
@@ -50,7 +50,7 @@ export default function ConfirmDeleteModal({
                             className="px-4 py-2 bg-red-600 text-white rounded-md 
                             hover:bg-red-700 transition-colors font-medium shadow-md"
                         >
-                            Delete
+                            Eliminar
                         </button>
                     </div>
                 </div>

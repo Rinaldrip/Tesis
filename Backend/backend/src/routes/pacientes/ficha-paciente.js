@@ -42,7 +42,7 @@ router.get("/pacientes/:cedula", async (req, res) => {
 
             // Obtener contactos de emergencia
             const contactosResult = await client.query(
-                'SELECT * FROM contactos_emergencia WHERE cedula_paciente = $1 ORDER BY id',
+                'SELECT * FROM contactos_emergencia WHERE cedula_paciente = $1',
                 [cedula]
             );
 

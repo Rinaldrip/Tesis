@@ -190,8 +190,12 @@ export function PatientDashboard({ patientId }: PatientDashboardProps) {
     const hasData = labResults.length > 0 && Object.keys(labStats).length > 0;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 p-6">
-            <div className="max-w-7xl mx-auto">
+        // Agregué w-full aquí para asegurar que el contenedor padre ocupe todo el ancho
+        <div className="min-h-screen w-full bg-gradient-to-br from-white/50 to-gray-100 p-6">
+
+            {/* CAMBIO CLAVE: Cambié 'max-w-7xl mx-auto' por 'w-full h-full' */}
+            <div className="w-full h-full">
+
                 {/* Usar PatientHeader en lugar del header temporal */}
                 {patient && <PatientHeader patientData={patient} />}
 

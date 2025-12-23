@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import type { View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
@@ -11,9 +11,10 @@ import {
     ChevronLeft,
     ChevronRight,
 } from 'lucide-react';
+import { api } from "@/services/paciente.api";
 
 /* -------------------------------------------------------------------------- */
-/*                                   Tipos                                    */
+/* Tipos                                   */
 /* -------------------------------------------------------------------------- */
 
 export interface CalendarEvent {
@@ -30,7 +31,6 @@ export interface CalendarEvent {
     | 'other';
 }
 
-// Configuración completa de localización en español
 const locales = {
     'es': es,
 };
@@ -43,7 +43,6 @@ const localizer = dateFnsLocalizer({
     locales,
 });
 
-// Mensajes en español para el calendario
 const messages = {
     date: 'Fecha',
     time: 'Hora',
@@ -71,59 +70,41 @@ interface CalendarEventWithDates {
     resource: CalendarEvent;
 }
 
-const SAMPLE_EVENTS: CalendarEvent[] = [
-    {
-        id: '1',
-        title: 'Sesión de Hemodiálisis - Unidad A',
-        description: 'Sesión matutina de hemodiálisis para la Unidad A',
-        start_date: new Date(2025, 10, 24, 8, 0).toISOString(),
-        end_date: new Date(2025, 10, 24, 12, 0).toISOString(),
-        category: 'hemodialysis',
-    },
-    {
-        id: '2',
-        title: 'Capacitación en Diálisis Peritoneal',
-        description:
-            'Entrenamiento para pacientes y familiares de diálisis peritoneal',
-        start_date: new Date(2025, 10, 24, 14, 0).toISOString(),
-        end_date: new Date(2025, 10, 24, 16, 0).toISOString(),
-        category: 'peritoneal_dialysis',
-    },
-    {
-        id: '3',
-        title: 'Consulta de Seguimiento Mensual',
-        description:
-            'Consultas de seguimiento para pacientes con enfermedad renal crónica',
-        start_date: new Date(2025, 10, 25, 9, 0).toISOString(),
-        end_date: new Date(2025, 10, 25, 13, 0).toISOString(),
-        category: 'controls',
-    },
-    {
-        id: '4',
-        title: 'Hemodiálisis - Unidad B',
-        description: 'Sesión vespertina de hemodiálisis en la Unidad B',
-        start_date: new Date(2025, 10, 25, 13, 0).toISOString(),
-        end_date: new Date(2025, 10, 25, 17, 0).toISOString(),
-        category: 'hemodialysis',
-    },
-    {
-        id: '5',  // Nuevo evento
-        title: 'Revisión de Equipos de Hemodiálisis',
-        description: 'Mantenimiento preventivo y calibración de equipos de hemodiálisis en todas las unidades',
-        start_date: new Date(2025, 12, 5, 10, 0).toISOString(),
-        end_date: new Date(2025, 8, 26, 15, 0).toISOString(),
-        category: 'other',
-    },
-];
-
 export default function NephrologyCalendar() {
-    const [storedEvents, setStoredEvents] = useState<CalendarEvent[]>(SAMPLE_EVENTS);
     const [view, setView] = useState<View>('month');
     const [date, setDate] = useState(new Date());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+    const [storedEvents, setStoredEvents] = useState<CalendarEvent[]>([]);
+
+    // Estados de carga y error
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // 1. Cargar Eventos (GET)
+    const fetchEvents = async () => {
+        try {
+            console.log('📅 Fetching calendar events...');
+            const response = await api.get('/calendar/events');
+
+            if (response.data.success) {
+                setStoredEvents(response.data.events);
+            } else {
+                setError("No se pudieron cargar los eventos");
+            }
+        } catch (err) {
+            console.error('❌ Error fetching events:', err);
+            setError('Error de conexión con el servidor');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchEvents();
+    }, []);
 
     const events: CalendarEventWithDates[] = storedEvents.map((event) => ({
         id: event.id,
@@ -145,35 +126,60 @@ export default function NephrologyCalendar() {
         setIsModalOpen(true);
     };
 
-    const handleSaveEvent = (eventData: Omit<CalendarEvent, 'id'>) => {
-        if (selectedEvent) {
-            setStoredEvents(
-                storedEvents.map((event) =>
-                    event.id === selectedEvent.id
-                        ? { ...eventData, id: event.id }
-                        : event,
-                ),
-            );
-        } else {
-            const newEvent: CalendarEvent = {
-                ...eventData,
-                id: Date.now().toString(),
-            };
-            setStoredEvents([...storedEvents, newEvent]);
-        }
+    // 2. Guardar Evento (POST / PUT)
+    const handleSaveEvent = async (eventData: Omit<CalendarEvent, 'id'>) => {
+        try {
+            if (selectedEvent) {
+                // --- ACTUALIZAR (PUT) ---
+                console.log('🔄 Updating event:', selectedEvent.id);
+                const response = await api.put(`/calendar/events/${selectedEvent.id}`, eventData);
 
-        setIsModalOpen(false);
-        setSelectedEvent(null);
-        setSelectedDate(undefined);
+                if (response.data.success) {
+                    setStoredEvents((prev) =>
+                        prev.map((event) =>
+                            event.id === selectedEvent.id ? response.data.event : event
+                        )
+                    );
+                }
+            } else {
+                // --- CREAR (POST) ---
+                console.log('✨ Creating new event');
+                const response = await api.post('/calendar/events', eventData);
+
+                if (response.data.success) {
+                    setStoredEvents((prev) => [...prev, response.data.event]);
+                }
+            }
+
+            // Cerrar modal solo si tuvo éxito
+            setIsModalOpen(false);
+            setSelectedEvent(null);
+            setSelectedDate(undefined);
+
+        } catch (err) {
+            console.error('❌ Error saving event:', err);
+            alert("Hubo un error al guardar el evento. Intenta nuevamente.");
+        }
     };
 
-    const handleConfirmDelete = () => {
-        if (selectedEvent) {
-            setStoredEvents(
-                storedEvents.filter((event) => event.id !== selectedEvent.id),
-            );
-            setIsDeleteModalOpen(false);
-            setSelectedEvent(null);
+    // 3. Eliminar Evento (DELETE)
+    const handleConfirmDelete = async () => {
+        if (!selectedEvent) return;
+
+        try {
+            console.log('🗑️ Deleting event:', selectedEvent.id);
+            const response = await api.delete(`/calendar/events/${selectedEvent.id}`);
+
+            if (response.data.success) {
+                setStoredEvents((prev) =>
+                    prev.filter((event) => event.id !== selectedEvent!.id)
+                );
+                setIsDeleteModalOpen(false);
+                setSelectedEvent(null);
+            }
+        } catch (err) {
+            console.error('❌ Error deleting event:', err);
+            alert("Hubo un error al eliminar el evento.");
         }
     };
 
@@ -192,7 +198,6 @@ export default function NephrologyCalendar() {
             fontWeight: 600,
         };
 
-        /* Paleta azul marino + dorado */
         switch (category) {
             case 'hemodialysis':
                 style.backgroundColor = '#0A1733';
@@ -225,16 +230,9 @@ export default function NephrologyCalendar() {
     };
 
     const CustomToolbar = (toolbar: any) => {
-        const goToBack = () => {
-            toolbar.onNavigate('PREV');
-        };
-
-        const goToNext = () => {
-            toolbar.onNavigate('NEXT');
-        };
-
+        const goToBack = () => toolbar.onNavigate('PREV');
+        const goToNext = () => toolbar.onNavigate('NEXT');
         const label = () => {
-            // Formatear el mes y año en español con capitalización
             const monthYear = format(toolbar.date, "MMMM yyyy", { locale: es });
             return monthYear.charAt(0).toUpperCase() + monthYear.slice(1);
         };
@@ -254,9 +252,7 @@ export default function NephrologyCalendar() {
                         <button onClick={goToBack} className="p-2 hover:bg-[#162447] rounded transition-colors">
                             <ChevronLeft size={20} />
                         </button>
-
                         <span className="text-lg font-semibold min-w-[140px] text-center">{label()}</span>
-
                         <button onClick={goToNext} className="p-2 hover:bg-[#162447] rounded transition-colors">
                             <ChevronRight size={20} />
                         </button>
@@ -266,18 +262,15 @@ export default function NephrologyCalendar() {
                                 onClick={() => handleViewChange('month')}
                                 className={`px-4 py-2 rounded transition-colors ${view === 'month'
                                     ? 'bg-[#D4AF37] text-[#0A1733] font-bold'
-                                    : 'bg-[#162447] hover:bg-[#1f345c]'
-                                    }`}
+                                    : 'bg-[#162447] hover:bg-[#1f345c]'}`}
                             >
                                 Mes
                             </button>
-
                             <button
                                 onClick={() => handleViewChange('week')}
                                 className={`px-4 py-2 rounded transition-colors ${view === 'week'
                                     ? 'bg-[#D4AF37] text-[#0A1733] font-bold'
-                                    : 'bg-[#162447] hover:bg-[#1f345c]'
-                                    }`}
+                                    : 'bg-[#162447] hover:bg-[#1f345c]'}`}
                             >
                                 Semana
                             </button>
@@ -289,50 +282,47 @@ export default function NephrologyCalendar() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col">
-            <div className={`flex-1 ${view === 'week' ? 'flex flex-col' : ''}`}>
-                <div className={`${view === 'week' ? 'flex-1' : ''}`}>
+        <div className="min-h-screen bg-white-100 flex flex-col">
+            <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 min-h-0 overflow-hidden">
                     <div className="max-w-7xl mx-auto p-4 md:p-6 h-full">
-                        {/* Calendario principal - Ocupa toda la altura en vista semanal */}
-                        <div className={`bg-white rounded-lg shadow-lg overflow-hidden ${view === 'week' ? 'h-full' : 'mb-6'}`}>
-                            <Calendar
-                                localizer={localizer}
-                                events={events}
-                                popup
-                                startAccessor="start"
-                                endAccessor="end"
-                                style={{
-                                    height: view === 'week' ? '100%' : 'calc(100vh - 200px)',
-                                    minHeight: view === 'week' ? 'auto' : '620px'
-                                }}
-                                view={view}
-                                onView={handleViewChange}
-                                date={date}
-                                onNavigate={(d) => setDate(d)}
-                                selectable
-                                onSelectSlot={handleSelectSlot}
-                                onSelectEvent={handleSelectEvent}
-                                eventPropGetter={eventStyleGetter}
-                                components={{ toolbar: CustomToolbar }}
-                                messages={messages}
-                                culture="es"
-                            />
+                        <div className={`bg-white rounded-lg shadow-lg overflow-hidden h-full ${view === 'week' ? '' : 'mb-6'}`}>
+                            {loading ? (
+                                <div className="h-full flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
+                                </div>
+                            ) : (
+                                <Calendar
+                                    localizer={localizer}
+                                    events={events}
+                                    popup
+                                    startAccessor="start"
+                                    endAccessor="end"
+                                    style={{
+                                        height: '100%',
+                                        minHeight: view === 'week' ? 'auto' : '620px'
+                                    }}
+                                    view={view}
+                                    onView={handleViewChange}
+                                    date={date}
+                                    onNavigate={(d) => setDate(d)}
+                                    selectable
+                                    onSelectSlot={handleSelectSlot}
+                                    onSelectEvent={handleSelectEvent}
+                                    eventPropGetter={eventStyleGetter}
+                                    components={{ toolbar: CustomToolbar }}
+                                    messages={messages}
+                                    culture="es"
+                                />
+                            )}
                         </div>
 
-                        {/* Leyenda - Solo se muestra en vista mensual */}
-                        {view === 'month' && (
+                        {view === 'month' && !loading && (
                             <div className="bg-white rounded-lg shadow p-6">
-                                <h3 className="text-lg font-semibold text-[#0A1733] mb-4">
-                                    Categorías de Eventos
-                                </h3>
-
+                                <h3 className="text-lg font-semibold text-[#0A1733] mb-4">Categorías de Eventos</h3>
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                     <LegendItem color="#0A1733" border="#D4AF37" label="Hemodiálisis" />
-                                    <LegendItem
-                                        color="#FFF7DF"
-                                        border="#D4AF37"
-                                        label="Diálisis Peritoneal"
-                                    />
+                                    <LegendItem color="#FFF7DF" border="#D4AF37" label="Diálisis Peritoneal" />
                                     <LegendItem color="#EFE6C9" border="#D4AF37" label="Controles" />
                                     <LegendItem color="#FEE2E2" border="#DC2626" label="Emergencias" />
                                     <LegendItem color="#F3F4F6" border="#D4AF37" label="Otros" />
@@ -343,7 +333,6 @@ export default function NephrologyCalendar() {
                 </div>
             </div>
 
-            {/* Modal Crear/Editar */}
             <EventModal
                 isOpen={isModalOpen}
                 onClose={() => {
@@ -357,7 +346,6 @@ export default function NephrologyCalendar() {
                 initialDate={selectedDate}
             />
 
-            {/* Modal Eliminar */}
             <ConfirmDeleteModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
@@ -368,21 +356,10 @@ export default function NephrologyCalendar() {
     );
 }
 
-function LegendItem({
-    color,
-    border,
-    label,
-}: {
-    color: string;
-    border: string;
-    label: string;
-}) {
+function LegendItem({ color, border, label }: { color: string; border: string; label: string }) {
     return (
         <div className="flex items-center gap-2">
-            <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: color, border: `2px solid ${border}` }}
-            ></div>
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: color, border: `2px solid ${border}` }}></div>
             <span className="text-sm">{label}</span>
         </div>
     );

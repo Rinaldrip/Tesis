@@ -13,7 +13,7 @@ interface Patient {
     enfermedad: string;
     estado: string | 'Estable' | 'Critico' | 'Mejorando' | 'Activo' | 'Inactivo';
     ultimaVisita: string;
-    creatina: string;
+    creatinina: string;
     proteinasT: string;
 }
 
@@ -108,7 +108,7 @@ export const PacientCart = ({ patient }: PacientCartProps) => {
                 </div>
                 <div className="flex justify-between">
                     <span className="text-gray-500">Creatinina:</span>
-                    <span className="font-medium text-gray-900">{patient.creatina || 'No disponible'}</span>
+                    <span className="font-medium text-gray-900">{patient.creatinina || 'No disponible'}</span>
                 </div>
                 <div className="flex justify-between">
                     <span className="text-gray-500">Proteínas T:</span>

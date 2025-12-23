@@ -109,7 +109,7 @@ export default function EventModal({
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-[#0A1733] text-xl">
-                        {event ? "Edit Event" : "Add New Event"}
+                        {event ? "Editar Evento" : "Agregar Nuevo Evento"}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -118,7 +118,7 @@ export default function EventModal({
                         {/* Información general */}
                         <div className="space-y-4">
                             <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
-                                Event Information
+                                Información General del Evento
                             </h3>
 
                             <div className="grid grid-cols-1 gap-4">
@@ -128,9 +128,9 @@ export default function EventModal({
                                     rules={{ required: "Title is required" }}
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Title *</FormLabel>
+                                            <FormLabel>Título *</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="Event title" {...field} />
+                                                <Input placeholder="Título del Evento" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -143,17 +143,17 @@ export default function EventModal({
                                     rules={{ required: "Category required" }}
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Category *</FormLabel>
+                                            <FormLabel>Categoría *</FormLabel>
                                             <FormControl>
                                                 <select
                                                     {...field}
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                 >
-                                                    <option value="hemodialysis">Hemodialysis</option>
-                                                    <option value="peritoneal_dialysis">Peritoneal Dialysis</option>
-                                                    <option value="controls">Controls / Follow-ups</option>
-                                                    <option value="emergencies">Emergencies</option>
-                                                    <option value="other">Other Tasks</option>
+                                                    <option value="hemodialysis">Hemodialisis</option>
+                                                    <option value="peritoneal_dialysis">Dialisis Peritoneal</option>
+                                                    <option value="controls">Control/Cita</option>
+                                                    <option value="emergencies">Emergencias</option>
+                                                    <option value="other">Otros Eventos</option>
                                                 </select>
                                             </FormControl>
                                             <FormMessage />
@@ -166,7 +166,7 @@ export default function EventModal({
                         {/* Fechas y horas */}
                         <div className="space-y-4">
                             <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
-                                Schedule
+                                Agendar
                             </h3>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -176,7 +176,7 @@ export default function EventModal({
                                     rules={{ required: "Required" }}
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Start Date *</FormLabel>
+                                            <FormLabel>Fecha de Inicio</FormLabel>
                                             <FormControl>
                                                 <Input type="date" {...field} />
                                             </FormControl>
@@ -191,7 +191,7 @@ export default function EventModal({
                                     rules={{ required: "Required" }}
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Start Time *</FormLabel>
+                                            <FormLabel>Hora de Inicio</FormLabel>
                                             <FormControl>
                                                 <Input type="time" {...field} />
                                             </FormControl>
@@ -206,7 +206,7 @@ export default function EventModal({
                                     rules={{ required: "Required" }}
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>End Date *</FormLabel>
+                                            <FormLabel>Fecha de Culminacion</FormLabel>
                                             <FormControl>
                                                 <Input type="date" {...field} />
                                             </FormControl>
@@ -221,7 +221,7 @@ export default function EventModal({
                                     rules={{ required: "Required" }}
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>End Time *</FormLabel>
+                                            <FormLabel>Hora de Culminación</FormLabel>
                                             <FormControl>
                                                 <Input type="time" {...field} />
                                             </FormControl>
@@ -235,7 +235,7 @@ export default function EventModal({
                         {/* Descripción */}
                         <div className="space-y-4">
                             <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
-                                Additional Notes
+                                Descripción del Evento
                             </h3>
 
                             <FormField
@@ -243,7 +243,7 @@ export default function EventModal({
                                 name="description"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Description</FormLabel>
+                                        <FormLabel>Descripción</FormLabel>
                                         <FormControl>
                                             <textarea
                                                 {...field}
@@ -265,17 +265,17 @@ export default function EventModal({
                                     className="bg-red-600 text-white hover:bg-red-700"
                                     onClick={onDelete}
                                 >
-                                    Delete Event
+                                    Eliminar Evento
                                 </Button>
                             )}
 
                             <div className="flex gap-3 ml-auto">
                                 <Button type="button" variant="outline" onClick={handleClose}>
-                                    Cancel
+                                    Cancelar
                                 </Button>
 
                                 <Button type="submit" className="bg-[#0A1733] text-white hover:bg-[#12204d]">
-                                    {event ? "Update Event" : "Create Event"}
+                                    {event ? "Actualizar Evento" : "Crear Evento"}
                                 </Button>
                             </div>
                         </div>

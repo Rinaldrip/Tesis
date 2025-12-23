@@ -24,8 +24,6 @@ router.get("/pacientes/stats/:cedula/:range", async (req, res) => {
         validRange = rangeMap["3meses"];
     }
 
-    console.log(`Consultando rango: ${range} -> ${validRange} para cédula: ${cedula}`);
-
     try {
         const result = await pool.query(
             `

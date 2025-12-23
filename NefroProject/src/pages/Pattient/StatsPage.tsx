@@ -8,7 +8,7 @@ export default function PatientPage() {
     return (
         <div>
             <BackToPatientButton />
-            <div className="p-6 bg-gray-50 min-h-screen">
+            <div className="p-6 bg-gray-50 min-h-screen w-h-full">
                 <PatientDashboard patientId={cedula || "0"} />
             </div>
         </div>

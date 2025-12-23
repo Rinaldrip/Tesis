@@ -138,15 +138,6 @@ export default function SettingsPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-6">
-            {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold  bg-gradient-to-r from-gray-800 to-gray-900 bg-clip-text text-transparent">
-                    Configuración del Sistema
-                </h1>
-                <p className="text-gray-600 mt-2">
-                    Administra respaldos, usuarios y configuración avanzada del sistema
-                </p>
-            </div>
 
             {/* Grid de configuraciones */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

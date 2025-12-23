@@ -1,3 +1,8 @@
+CREATE DATABASE bd_nefroApp1;
+
+-- Cambia '1234' por la contraseña que quieras usar
+CREATE USER nefro_user WITH PASSWORD '1234';
+
 -- 1. Tabla pacientes
 CREATE TABLE pacientes (
     cedula BIGINT PRIMARY KEY,
@@ -43,7 +48,7 @@ CREATE TABLE datos_medicos (
 
 -- 4. Tabla contactos_emergencia
 CREATE TABLE contactos_emergencia (
-    cedula_paciente BIGINT PRIMARY KEY REFERENCES pacientes(cedula) ON DELETE CASCADE
+    cedula_paciente BIGINT PRIMARY KEY REFERENCES pacientes(cedula) ON DELETE CASCADE, -- Faltaba esta coma
     nombre VARCHAR(100),
     telefono VARCHAR(20),
     parentesco VARCHAR(50)
@@ -51,7 +56,7 @@ CREATE TABLE contactos_emergencia (
 
 -- 5. Tabla accesos_vasculares
 CREATE TABLE accesos_vasculares (
-    cedula_paciente BIGINT PRIMARY KEY REFERENCES pacientes(cedula) ON DELETE CASCADE
+    cedula_paciente BIGINT PRIMARY KEY REFERENCES pacientes(cedula) ON DELETE CASCADE, -- Faltaba esta coma
     tipo VARCHAR(50),
     fecha_realizada DATE,
     ubicacion VARCHAR(100)
@@ -143,7 +148,8 @@ CREATE TABLE especialistas (
     phone VARCHAR(20) NOT NULL,
     num_colegio VARCHAR(10) NOT NULL UNIQUE,
     num_mpps VARCHAR(10) NOT NULL UNIQUE,
-    direction TEXT);
+    direction TEXT
+);
 
 CREATE TABLE calendar_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -151,7 +157,8 @@ CREATE TABLE calendar_events (
     description TEXT,
     start_date TIMESTAMP WITH TIME ZONE NOT NULL,
     end_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    category VARCHAR(50) NOT NULL);
+    category VARCHAR(50) NOT NULL
+);
 
 CREATE TABLE usuarios (
     usuario VARCHAR(50) PRIMARY KEY NOT NULL,
@@ -160,6 +167,13 @@ CREATE TABLE usuarios (
     respuesta_seguridad VARCHAR(255) NOT NULL
 );
 
+INSERT INTO usuarios (usuario, contraseña, pregunta_seguridad, respuesta_seguridad)
+VALUES (
+    'admin', 
+    crypt('admin123', gen_salt('bf')), 
+    '¿Color favorito?', 
+    'Azul'
+);
 
 -- ÍNDICES para mejorar performance
 CREATE INDEX idx_laboratorios_cedula_fecha ON laboratorios(cedula_paciente, fecha DESC);
@@ -168,6 +182,7 @@ CREATE INDEX idx_ordenes_medicas_cedula_fecha ON ordenes_medicas(cedula_paciente
 CREATE INDEX idx_evoluciones_cedula_fecha ON evoluciones(cedula_paciente, fecha DESC);
 CREATE INDEX idx_tratamientos_cedula_fecha ON tratamientos(cedula_paciente, fecha DESC);
 CREATE INDEX idx_contactos_emergencia_cedula ON contactos_emergencia(cedula_paciente);
+-- Corrección aquí abajo: tenías "cedula paciente" con espacio
 CREATE INDEX idx_accesos_vasculares_cedula ON accesos_vasculares(cedula_paciente);
 
 -- PERMISOS para nefro_user

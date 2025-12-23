@@ -26,6 +26,7 @@ import reporteDatosRoutes from "./routes/pacientes/report/DatosDemograficos.js";
 import reporteDatosClinicos from "./routes/pacientes/report/DatosClinicos.js";
 import { generarReporteCompleto } from './routes/pacientes/report/crearExcel.js';
 import loginRoutes from "./routes/login.js";  
+import calenderioRoutes from "./routes/calender/calendario.js";
 
 import especialistaRoutes from "./routes/especialista/Especialista.js";
 // CAMBIO: Usar import en lugar de require
@@ -101,7 +102,8 @@ app.use("/api",
     reporteDatosRoutes,
     reporteDatosClinicos,
     especialistaRoutes,
-    loginRoutes
+    loginRoutes,
+    calenderioRoutes
 );
 
 // Manejo de rutas no encontradas
