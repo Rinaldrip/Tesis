@@ -1,23 +1,26 @@
-// pages/PatientsPage.tsx
-import { useState, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PacientCart } from "@/components/custom/paciente/PacientCart";
 import { SearchCustom } from "@/components/custom/SearchCustom";
 import { Pagination } from "@/components/custom/Pagination";
-import { Loader, RefreshCw, AlertCircle } from "lucide-react";
+import { Loader, RefreshCw, AlertCircle, Filter } from "lucide-react";
 import { api } from "@/services/paciente.api";
 
+// Interfaces
 interface Patient {
-    id: number;
     cedula: string;
     nombre: string;
     apellido: string;
     fechaNacimiento: string;
     enfermedad: string;
-    estado: string | 'Estable' | 'Critico' | 'Mejorando' | 'Activo' | 'Inactivo';
+    tipo_dialisis: string;
+    acceso_vascular: string;
+    hipertension_arterial: boolean;
+    estado: string;
     ultimaVisita: string;
-    creatina: string;
-    proteinasT: string;
+    creatinina: number;
+    proteinasT: number;
+    edad: number;
 }
 
 type SortOption = "nombre" | "cedula" | "estado" | "fecha-ingreso";
@@ -26,108 +29,121 @@ type SortDirection = "asc" | "desc";
 export const PatientsPage = () => {
     const navigate = useNavigate();
 
-    // 🔹 Estado principal
-    const [allPatients, setAllPatients] = useState<Patient[]>([]);
+    // Estados
+    const [patients, setPatients] = useState<Patient[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    // 🔹 Búsqueda / ordenamiento
     const [searchTerm, setSearchTerm] = useState("");
     const [sortConfig, setSortConfig] = useState<{ field: SortOption; direction: SortDirection }>({
-        field: "nombre",
-        direction: "asc",
+        field: "fecha-ingreso",
+        direction: "desc",
     });
 
-    // 🔹 🔵 PAGINACIÓN LOCAL BASE 0
-    const [currentPage, setCurrentPage] = useState(0); // 👈 BASE 0 REAL
-    const itemsPerPage = 8;
+    // Filtros
+    const [filters, setFilters] = useState({
+        estado: "",
+        dialisis: "",
+        hipertension: "",
+        acceso_vascular: ""
+    });
 
-    // Handlers
-    const handleSearch = (term: string) => {
-        setSearchTerm(term);
-        setCurrentPage(0);
-    };
+    // Paginación
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 8,
+        total: 0,
+        totalPages: 0
+    });
 
-    const handleSort = (field: SortOption, direction: SortDirection) => {
-        setSortConfig({ field, direction });
-        setCurrentPage(0);
-    };
+    const activeFiltersCount = Object.values(filters).filter(v => v !== "").length;
 
-    const handleAddPatient = () => navigate("/pacientes/add");
-
-    // 🔹 Obtener todos los pacientes solo una vez
-    const fetchPatients = async () => {
+    // 1. Fetch de Pacientes
+    const fetchPatients = useCallback(async () => {
         setLoading(true);
         setError(null);
 
         try {
-            const response = await api.get(`/pacientes`);
-            const { data } = response.data;
-            setAllPatients(data);
+            // Construimos los parámetros URL
+            const params = new URLSearchParams({
+                page: pagination.page.toString(),     // Enviamos página al backend
+                limit: pagination.limit.toString(),   // Enviamos límite al backend
+                sortBy: sortConfig.field,             // Enviamos ordenamiento
+                sortOrder: sortConfig.direction,
+                ...(searchTerm && { search: searchTerm }),
+                ...(filters.estado && { estado: filters.estado }),
+                ...(filters.dialisis && { dialisis: filters.dialisis }),
+                ...(filters.hipertension && { hipertension: filters.hipertension }),
+                ...(filters.acceso_vascular && { acceso_vascular: filters.acceso_vascular })
+            });
+
+            console.log("📡 Consultando:", `/pacientes?${params.toString()}`); // Log para verificar
+
+            const response = await api.get(`/pacientes?${params.toString()}`);
+
+            if (response.data.success) {
+                // CORRECCIÓN IMPORTANTE:
+                // No usamos .slice() aquí porque el backend ya nos da los datos paginados.
+                // Usamos response.data.data directamente.
+                setPatients(response.data.data || []);
+
+                // Actualizamos la información de paginación que viene del backend
+                if (response.data.pagination) {
+                    setPagination(prev => ({
+                        ...prev,
+                        total: response.data.pagination.total,
+                        totalPages: response.data.pagination.totalPages
+                    }));
+                }
+            } else {
+                throw new Error("La respuesta del servidor no fue exitosa");
+            }
+
         } catch (err: any) {
             console.error("❌ Error fetching patients:", err);
             setError(err.response?.data?.error || "Error al cargar pacientes");
+            setPatients([]);
         } finally {
-            setLoading(false);
+            setLoading(false); // Esto asegura que el spinner desaparezca
         }
-    };
+    }, [searchTerm, filters, pagination.page, pagination.limit, sortConfig]);
 
+    // 2. CORRECCIÓN: El useEffect que faltaba para disparar la carga
     useEffect(() => {
         fetchPatients();
-    }, []);
+    }, [fetchPatients]);
 
-    // 🔹 Filtrado instantáneo
-    const filtered = allPatients.filter((p) => {
-        if (!searchTerm.trim()) return true;
-        const t = searchTerm.toLowerCase();
-        return (
-            p.nombre.toLowerCase().includes(t) ||
-            p.apellido.toLowerCase().includes(t) ||
-            p.cedula.includes(t) ||
-            p.enfermedad?.toLowerCase().includes(t) ||
-            p.estado?.toLowerCase().includes(t)
-        );
-    });
 
-    // 🔹 Ordenamiento
-    const sorted = [...filtered].sort((a, b) => {
-        let aVal: any = "";
-        let bVal: any = "";
+    // Handlers
+    const handleSearch = (term: string) => {
+        setSearchTerm(term);
+        setPagination(prev => ({ ...prev, page: 1 })); // Reset a página 1 al buscar
+    };
 
-        switch (sortConfig.field) {
-            case "nombre":
-                aVal = a.nombre.toLowerCase();
-                bVal = b.nombre.toLowerCase();
-                break;
-            case "cedula":
-                aVal = a.cedula;
-                bVal = b.cedula;
-                break;
-            case "estado":
-                aVal = a.estado?.toLowerCase();
-                bVal = b.estado?.toLowerCase();
-                break;
-            case "fecha-ingreso":
-                aVal = new Date(a.ultimaVisita).getTime();
-                bVal = new Date(b.ultimaVisita).getTime();
-                break;
-        }
+    const handleSort = (field: SortOption, direction: SortDirection) => {
+        setSortConfig({ field, direction });
+        // No reseteamos página necesariamente, pero refrescamos la consulta automáticamente por el useEffect
+    };
 
-        if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
-        if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
-        return 0;
-    });
+    const handleFilterChange = (key: string, value: string) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
+        setPagination(prev => ({ ...prev, page: 1 })); // Reset a página 1 al filtrar
+    };
 
-    // 🔹 Paginación BASE 0 correcta
-    const totalItems = sorted.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const handleAddPatient = () => navigate("/pacientes/add");
 
-    const indexOfFirst = currentPage * itemsPerPage; // 👈 BASE 0
-    const indexOfLast = indexOfFirst + itemsPerPage;
-    const currentPatients = sorted.slice(indexOfFirst, indexOfLast);
+    const handlePageChange = (newPage: number) => {
+        // La paginación visual suele ser 0-indexed, pero tu estado es 1-indexed
+        setPagination(prev => ({ ...prev, page: newPage + 1 }));
+    };
 
-    // 🔹 Loading
-    if (loading) {
+    const handleClearFilters = () => {
+        setFilters({ estado: "", dialisis: "", hipertension: "", acceso_vascular: "" });
+        setSearchTerm("");
+        setPagination(prev => ({ ...prev, page: 1 }));
+    };
+
+    // Render de Carga
+    if (loading && patients.length === 0) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
@@ -138,117 +154,97 @@ export const PatientsPage = () => {
         );
     }
 
-    // 🔹 Error crítico
-    if (error && allPatients.length === 0) {
+    // Render de Error
+    if (error && patients.length === 0) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
-                        <div className="text-red-600 text-4xl mb-2">⚠️</div>
-                        <h2 className="text-red-800 font-semibold mb-2">Error</h2>
-                        <p className="text-red-600 mb-4">{error}</p>
-                        <button
-                            onClick={() => fetchPatients()}
-                            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium mx-auto"
-                        >
-                            <RefreshCw className="w-4 h-4" />
-                            Reintentar
-                        </button>
-                    </div>
+                <div className="text-center max-w-md bg-white p-8 rounded-lg shadow-lg">
+                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Error de conexión</h2>
+                    <p className="text-gray-600 mb-6">{error}</p>
+                    <button
+                        onClick={fetchPatients}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium mx-auto transition-colors"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        Reintentar
+                    </button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 p-4">
-            {/* HEADER */}
-            <div className="text-center">
+        <div className="space-y-6 p-4 max-w-[1600px] mx-auto">
+            {/* Header */}
+            <div className="text-center py-6">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Pacientes</h1>
                 <p className="text-gray-600">
-                    {totalItems} paciente{totalItems !== 1 ? "s" : ""} encontrado
-                    {totalItems !== 1 ? "s" : ""}
+                    Mostrando {patients.length} de {pagination.total} pacientes registrados
                 </p>
             </div>
 
-            {/* Warning */}
-            {error && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center">
-                    <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
-                    <p className="text-yellow-800 text-sm">{error}</p>
-                </div>
-            )}
-
-            {/* Search */}
+            {/* Componente de Búsqueda y Filtros */}
             <SearchCustom
                 onSearch={handleSearch}
                 onSort={handleSort}
                 onAddPatient={handleAddPatient}
+                onFilterChange={handleFilterChange}
                 searchTerm={searchTerm}
                 currentSort={sortConfig}
+                onClear={handleClearFilters}
             />
 
-            {searchTerm && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-blue-800 text-sm">
-                        {sorted.length} resultado{sorted.length !== 1 ? "s" : ""} para "{searchTerm}"
-                    </p>
-                </div>
-            )}
-
-            {/* Top Pagination */}
-            {totalPages > 1 && (
-                <Pagination
-                    currentPage={currentPage} // 👈 BASE 0 REAL
-                    totalPages={totalPages}
-                    totalItems={totalItems}
-                    itemsPerPage={itemsPerPage}
-                    onPageChange={setCurrentPage}
-                />
-            )}
-
-            {/* Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {currentPatients.map((patient) => (
-                    <PacientCart key={patient.cedula || patient.id} patient={patient} />
+            {/* Grid de Pacientes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {patients.map((patient) => (
+                    <PacientCart
+                        key={patient.cedula}
+                        patient={{
+                            id: parseInt(patient.cedula) || 0,
+                            cedula: patient.cedula,
+                            nombre: patient.nombre,
+                            apellido: patient.apellido,
+                            fechaNacimiento: patient.fechaNacimiento,
+                            enfermedad: patient.enfermedad,
+                            estado: patient.estado as any,
+                            ultimaVisita: patient.ultimaVisita,
+                            creatinina: patient.creatinina?.toString() || "N/A",
+                            proteinasT: patient.proteinasT?.toString() || "N/A"
+                        }}
+                    />
                 ))}
             </div>
 
-            {/* Bottom Pagination */}
-            {totalPages > 1 && (
-                <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    totalItems={totalItems}
-                    itemsPerPage={itemsPerPage}
-                    onPageChange={setCurrentPage}
-                />
+            {/* Estado Vacío */}
+            {patients.length === 0 && !loading && (
+                <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+                    <div className="text-gray-300 mb-4 text-6xl">🔍</div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        No se encontraron resultados
+                    </h3>
+                    <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+                        Intenta ajustar tus filtros de búsqueda o agrega un nuevo paciente al sistema.
+                    </p>
+                    <button
+                        onClick={handleClearFilters}
+                        className="text-blue-600 font-medium hover:underline"
+                    >
+                        Limpiar búsqueda
+                    </button>
+                </div>
             )}
 
-            {/* No results */}
-            {sorted.length === 0 && (
-                <div className="text-center py-12">
-                    {searchTerm ? (
-                        <>
-                            <p className="text-gray-500 text-lg mb-2">No se encontraron pacientes</p>
-                            <button
-                                onClick={() => setSearchTerm("")}
-                                className="mt-4 text-blue-600 hover:text-blue-800 font-medium"
-                            >
-                                Mostrar todos los pacientes
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <p className="text-gray-500 text-lg mb-4">No hay pacientes registrados</p>
-                            <button
-                                onClick={handleAddPatient}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium"
-                            >
-                                Agregar Primer Paciente
-                            </button>
-                        </>
-                    )}
+            {/* Paginación */}
+            {pagination.totalPages > 1 && (
+                <div className="py-4 flex justify-center">
+                    <Pagination
+                        currentPage={pagination.page - 1} // Ajuste porque tu componente Pagination parece ser 0-indexed
+                        totalPages={pagination.totalPages}
+                        totalItems={pagination.total}
+                        itemsPerPage={pagination.limit}
+                        onPageChange={handlePageChange}
+                    />
                 </div>
             )}
         </div>

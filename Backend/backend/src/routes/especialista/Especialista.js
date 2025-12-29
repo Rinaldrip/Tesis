@@ -125,8 +125,7 @@ router.get("/especialistas", async (req, res) => {
     const client = await pool.connect();
     try {
         const result = await client.query(
-            `SELECT cedula, full_name, date_of_birth, specialty, graduation_year, 
-                    university, email, phone, num_colegio, num_mpps, direction
+            `SELECT *
             FROM especialistas 
             ORDER BY full_name`
         );
@@ -147,37 +146,6 @@ router.get("/especialistas", async (req, res) => {
     }
 });
 
-// GET - Obtener especialista por cédula
-router.get("/especialista/:cedula", async (req, res) => {
-    const client = await pool.connect();
-    try {
-        const { cedula } = req.params;
-
-        const result = await client.query(
-            'SELECT * FROM especialistas WHERE cedula = $1',
-            [cedula]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ 
-                error: "Especialista no encontrado" 
-            });
-        }
-
-        res.json({
-            success: true,
-            data: result.rows[0]
-        });
-
-    } catch (error) {
-        console.error("Error al obtener especialista:", error);
-        res.status(500).json({ 
-            error: "Error interno del servidor al obtener especialista" 
-        });
-    } finally {
-        client.release();
-    }
-});
 
 // PUT - Actualizar especialista
 router.put("/especialista/update/:cedula", async (req, res) => {
@@ -259,6 +227,33 @@ router.put("/especialista/update/:cedula", async (req, res) => {
         });
     } finally {
         client.release();
+    }
+});
+
+// POST /especialista/set-active/:cedula
+// PUT - Establecer médico activo (Corregido)
+router.put('/especialista/set-active/:cedula', async (req, res) => {
+    const { cedula } = req.params;
+    const client = await pool.connect(); // <--- IMPORTANTE: Conectar al pool
+    
+    try {
+        await client.query('BEGIN'); // Usar client, no db
+
+        // 1. Desactivar a todos
+        await client.query('UPDATE especialistas SET is_active = false');
+
+        // 2. Activar al seleccionado
+        await client.query('UPDATE especialistas SET is_active = true WHERE cedula = $1', [cedula]);
+
+        await client.query('COMMIT');
+
+        res.json({ success: true, message: "Médico en servicio actualizado" });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error("Error al activar especialista:", error);
+        res.status(500).json({ success: false, error: error.message });
+    } finally {
+        client.release(); // Ahora sí existe client para liberarlo
     }
 });
 

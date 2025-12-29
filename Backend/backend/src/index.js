@@ -3,6 +3,7 @@ import cors from "cors";
 import multer from "multer";
 import pool from "./pool.js";
 import dotenv from "dotenv";
+import "dotenv/config";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -27,6 +28,7 @@ import reporteDatosClinicos from "./routes/pacientes/report/DatosClinicos.js";
 import { generarReporteCompleto } from './routes/pacientes/report/crearExcel.js';
 import loginRoutes from "./routes/login.js";  
 import calenderioRoutes from "./routes/calender/calendario.js";
+import configRoutes from "./routes/confi/configuration.js";
 
 import especialistaRoutes from "./routes/especialista/Especialista.js";
 // CAMBIO: Usar import en lugar de require
@@ -103,7 +105,8 @@ app.use("/api",
     reporteDatosClinicos,
     especialistaRoutes,
     loginRoutes,
-    calenderioRoutes
+    calenderioRoutes,
+    configRoutes
 );
 
 // Manejo de rutas no encontradas

@@ -17,6 +17,7 @@ interface SearchCustomProps {
         direction: SortDirection;
     };
     onFilterChange?: (key: string, value: string) => void;
+    onClear?: () => void; // <--- 1. AGREGA ESTO
 }
 
 type SortOption = 'nombre' | 'cedula' | 'estado' | 'fecha-ingreso';
@@ -28,7 +29,8 @@ export const SearchCustom = ({
     onSort,
     searchTerm = "",
     currentSort,
-    onFilterChange
+    onFilterChange,
+    onClear
 }: SearchCustomProps) => {
     const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
     const [activeAcordion, setActiveAcordion] = useState<string>('');
@@ -189,7 +191,7 @@ export const SearchCustom = ({
                                 <Button
                                     variant="ghost"
                                     className="cursor-pointer hover:bg-gray-100"
-                                    onClick={clearFilters}
+                                    onClick={onClear}
                                 >
                                     Limpiar Filtros
                                 </Button>
@@ -219,6 +221,8 @@ export const SearchCustom = ({
                                             <SelectItem value="Estable">Estable</SelectItem>
                                             <SelectItem value="Mejorando">Mejorando</SelectItem>
                                             <SelectItem value="Critico">Crítico</SelectItem>
+                                            <SelectItem value="Inactivo">Inactivo</SelectItem>
+                                            <SelectItem value="Activo">Activo</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

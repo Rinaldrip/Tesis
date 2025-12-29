@@ -241,4 +241,177 @@ router.get("/test", (req, res) => {
     res.json({ message: "✅ Ruta /api/paciente/add está funcionando" });
 });
 
+// En tu backend, modifica la ruta PUT:
+router.put("/pacientes/update/:cedula", async (req, res) => {
+    const client = await pool.connect();
+    const { cedula } = req.params;
+    
+    const { 
+        paciente, 
+        contactosEmergencia,  // Cambiado de contactoEmergencia
+        datosIngreso, 
+        datosMedicos, 
+        ultimoTratamiento,    // Cambiado de tratamientos
+        accesosVasculares     // Cambiado de accesoVascular
+    } = req.body;
+
+    try {
+        await client.query("BEGIN");
+
+        // 1. Actualizar Paciente
+        if (!paciente || !paciente.nombre) {
+            throw new Error("Datos del paciente incompletos");
+        }
+        
+        await client.query(
+            `UPDATE pacientes SET 
+                nombre = $1, apellido = $2, fecha_nacimiento = $3, 
+                lugar_nacimiento = $4, etnia = $5, sexo = $6, 
+                direccion = $7, telefono = $8, estado = $9
+             WHERE cedula = $10`,
+            [
+                paciente.nombre,
+                paciente.apellido,
+                safeValue(paciente.fecha_nacimiento, 'date'),
+                paciente.lugar_nacimiento,
+                paciente.etnia,
+                safeValue(paciente.sexo, 'boolean'),
+                paciente.direccion,
+                paciente.telefono,
+                paciente.estado,
+                cedula
+            ]
+        );
+
+        // 2. Actualizar Contacto Emergencia (manejar array)
+        if (contactosEmergencia) {
+            const contacto = Array.isArray(contactosEmergencia) 
+                ? contactosEmergencia[0] 
+                : contactosEmergencia;
+            
+            await client.query(
+                `INSERT INTO contactos_emergencia (cedula_paciente, nombre, telefono, parentesco)
+                 VALUES ($1, $2, $3, $4)
+                 ON CONFLICT (cedula_paciente) DO UPDATE SET
+                    nombre = EXCLUDED.nombre,
+                    telefono = EXCLUDED.telefono,
+                    parentesco = EXCLUDED.parentesco`,
+                [cedula, contacto.nombre, contacto.telefono, contacto.parentesco]
+            );
+        }
+
+        // 3. Actualizar Datos Ingreso
+        if (datosIngreso) {
+            await client.query(
+                `INSERT INTO datos_ingreso (cedula_paciente, fecha_ingreso, fecha_egreso, etiologia_enfermedad_renal, causa_egreso, peso_ingreso_kg, talla_cm, volumen_residual_cc)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                 ON CONFLICT (cedula_paciente) DO UPDATE SET
+                    fecha_ingreso = EXCLUDED.fecha_ingreso,
+                    fecha_egreso = EXCLUDED.fecha_egreso,
+                    etiologia_enfermedad_renal = EXCLUDED.etiologia_enfermedad_renal,
+                    causa_egreso = EXCLUDED.causa_egreso,
+                    peso_ingreso_kg = EXCLUDED.peso_ingreso_kg,
+                    talla_cm = EXCLUDED.talla_cm,
+                    volumen_residual_cc = EXCLUDED.volumen_residual_cc`,
+                [
+                    cedula,
+                    safeValue(datosIngreso.fecha_ingreso, 'date'),
+                    safeValue(datosIngreso.fecha_egreso, 'date'),
+                    datosIngreso.etiologia_enfermedad_renal,
+                    datosIngreso.causa_egreso,
+                    safeValue(datosIngreso.peso_ingreso_kg, 'number'),
+                    safeValue(datosIngreso.talla_cm, 'number'),
+                    safeValue(datosIngreso.volumen_residual_cc, 'number')
+                ]
+            );
+        }
+
+        // 4. Actualizar Datos Médicos
+        if (datosMedicos) {
+            await client.query(
+                `INSERT INTO datos_medicos (
+                    cedula_paciente, hipertension_arterial, tiempo_diagnostico, diabetes, 
+                    tratamiento_hipertension, tipo_dialisis, turno,
+                    vih, vdrl, hbsag, anticore, hc, covid19
+                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                 ON CONFLICT (cedula_paciente) DO UPDATE SET
+                    hipertension_arterial = EXCLUDED.hipertension_arterial,
+                    tiempo_diagnostico = EXCLUDED.tiempo_diagnostico,
+                    diabetes = EXCLUDED.diabetes,
+                    tratamiento_hipertension = EXCLUDED.tratamiento_hipertension,
+                    tipo_dialisis = EXCLUDED.tipo_dialisis,
+                    turno = EXCLUDED.turno,
+                    vih = EXCLUDED.vih,
+                    vdrl = EXCLUDED.vdrl,
+                    hbsag = EXCLUDED.hbsag,
+                    anticore = EXCLUDED.anticore,
+                    hc = EXCLUDED.hc,
+                    covid19 = EXCLUDED.covid19`,
+                [
+                    cedula,
+                    safeValue(datosMedicos.hipertension_arterial, 'boolean'),
+                    datosMedicos.tiempo_diagnostico,
+                    datosMedicos.diabetes,
+                    datosMedicos.tratamiento_hipertension,
+                    datosMedicos.tipo_dialisis,
+                    datosMedicos.turno,
+                    safeValue(datosMedicos.vih, 'boolean'),
+                    safeValue(datosMedicos.vdrl, 'boolean'),
+                    safeValue(datosMedicos.hbsag, 'boolean'),
+                    safeValue(datosMedicos.anticore, 'boolean'),
+                    safeValue(datosMedicos.hc, 'boolean'),
+                    safeValue(datosMedicos.covid19, 'boolean')
+                ]
+            );
+        }
+
+        // 5. Actualizar Tratamientos
+        if (ultimoTratamiento && ultimoTratamiento.tratamiento) {
+            await client.query(
+                `INSERT INTO tratamientos (cedula_paciente, descripcion)
+                 VALUES ($1, $2)
+                 ON CONFLICT (cedula_paciente) DO UPDATE SET
+                    descripcion = EXCLUDED.descripcion`,
+                [cedula, ultimoTratamiento.tratamiento]
+            );
+        }
+
+        // 6. Actualizar Acceso Vascular (manejar array)
+        if (accesosVasculares) {
+            const acceso = Array.isArray(accesosVasculares) && accesosVasculares.length > 0
+                ? accesosVasculares[0]
+                : { tipo: '', fecha_realizada: '', ubicacion: '' };
+            
+            await client.query(
+                `INSERT INTO accesos_vasculares (cedula_paciente, tipo, fecha_realizada, ubicacion)
+                 VALUES ($1, $2, $3, $4)
+                 ON CONFLICT (cedula_paciente) DO UPDATE SET
+                    tipo = EXCLUDED.tipo,
+                    fecha_realizada = EXCLUDED.fecha_realizada,
+                    ubicacion = EXCLUDED.ubicacion`,
+                [
+                    cedula,
+                    acceso.tipo,
+                    safeValue(acceso.fecha_realizada, 'date'),
+                    acceso.ubicacion
+                ]
+            );
+        }
+
+        await client.query("COMMIT");
+        res.json({ success: true, message: "Paciente actualizado correctamente" });
+
+    } catch (error) {
+        await client.query("ROLLBACK");
+        console.error("Error actualizando paciente:", error);
+        res.status(500).json({ 
+            success: false,
+            error: "Error al actualizar paciente", 
+            details: error.message 
+        });
+    } finally {
+        client.release();
+    }
+});
+
 export default router;

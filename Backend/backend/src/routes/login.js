@@ -86,153 +86,43 @@ router.post("/login", async (req, res) => {
     }
 });
 
-
-
-// 2. REGISTRAR NUEVO USUARIO (solo administradores)
-router.post("/register", verifyToken, async (req, res) => {
+router.post("/register", async (req, res) => {
     try {
-        const { 
-            username, 
-            password, 
-            securityQuestion, 
-            securityAnswer 
-        } = req.body;
+        // 1. AQUI ESTA LA CLAVE: 
+        // Tu Frontend envía 'question' y 'answer'.
+        // Tu Backend estaba esperando 'securityQuestion' (por eso daba null).
+        const { username, password, question, answer } = req.body;
 
-        // Validaciones
-        if (!username || !password) {
-            return res.status(400).json({
-                success: false,
-                error: "Usuario y contraseña son requeridos."
-            });
+        console.log("Datos llegando al backend:", req.body); // Verás que ahora sí llegan
+
+        if (!username || !password || !question || !answer) {
+            return res.status(400).json({ success: false, error: "Todos los campos son obligatorios" });
         }
 
-        if (password.length < 8) {
-            return res.status(400).json({
-                success: false,
-                error: "La contraseña debe tener al menos 8 caracteres."
-            });
+        // 2. Verificar usuario existente
+        const userCheck = await pool.query("SELECT * FROM usuarios WHERE usuario = $1", [username]);
+        if (userCheck.rows.length > 0) {
+            return res.status(409).json({ success: false, error: "El usuario ya existe" });
         }
 
-        // Verificar si el usuario ya existe
-        const checkUserQuery = `
-            SELECT usuario FROM usuarios WHERE usuario = $1
-        `;
-        const existingUser = await pool.query(checkUserQuery, [username]);
-        
-        if (existingUser.rows.length > 0) {
-            return res.status(409).json({
-                success: false,
-                error: "El usuario ya existe."
-            });
-        }
+        // 3. Encriptar
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+        const answerHash = await bcrypt.hash(answer.toLowerCase(), salt);
 
-        // Encriptar contraseña
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-        
-        // Encriptar respuesta de seguridad (opcional)
-        const hashedSecurityAnswer = securityAnswer 
-            ? await bcrypt.hash(securityAnswer.toLowerCase(), saltRounds)
-            : null;
+        // 4. Insertar usando las variables correctas
+        const newUser = await pool.query(
+            `INSERT INTO usuarios (usuario, contraseña, pregunta_seguridad, respuesta_seguridad) 
+             VALUES ($1, $2, $3, $4) 
+             RETURNING usuario`,
+            [username, passwordHash, question, answerHash] // <--- AQUÍ usamos 'question'
+        );
 
-        // Insertar nuevo usuario
-        const insertQuery = `
-            INSERT INTO usuarios (
-                usuario, 
-                contraseña, 
-                pregunta_seguridad, 
-                respuesta_seguridad
-            ) VALUES ($1, $2, $3, $4)
-            RETURNING usuario
-        `;
-        
-        const values = [
-            username,
-            hashedPassword,
-            securityQuestion || null,
-            hashedSecurityAnswer
-        ];
-
-        const result = await pool.query(insertQuery, values);
-
-        res.status(201).json({
-            success: true,
-            message: "Usuario creado exitosamente",
-            data: {
-                username: result.rows[0].usuario
-            }
-        });
+        res.json({ success: true, user: newUser.rows[0] });
 
     } catch (error) {
-        console.error("Error registrando usuario:", error);
-        res.status(500).json({ 
-            success: false,
-            error: "Error interno del servidor" 
-        });
-    }
-});
-
-// 3. CREAR USUARIO ADMIN POR DEFECTO (solo una vez)
-router.post("/create-default-admin", async (req, res) => {
-    try {
-        const adminUsername = 'admin';
-        const adminPassword = 'Admin@2024!';
-        const securityQuestion = '¿Cuál es tu mascota favorita?';
-        const securityAnswer = 'perro';
-
-        // Verificar si ya existe el admin
-        const checkAdminQuery = `
-            SELECT usuario FROM usuarios WHERE usuario = $1
-        `;
-        const existingAdmin = await pool.query(checkAdminQuery, [adminUsername]);
-        
-        if (existingAdmin.rows.length > 0) {
-            return res.json({
-                success: false,
-                message: "El usuario administrador ya existe.",
-                note: "Si necesitas resetear la contraseña, usa el endpoint de recuperación."
-            });
-        }
-
-        // Encriptar contraseña
-        const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
-        const hashedSecurityAnswer = await bcrypt.hash(securityAnswer.toLowerCase(), saltRounds);
-
-        // Crear usuario admin
-        const insertQuery = `
-            INSERT INTO usuarios (
-                usuario, 
-                contraseña, 
-                pregunta_seguridad, 
-                respuesta_seguridad
-            ) VALUES ($1, $2, $3, $4)
-            RETURNING usuario
-        `;
-        
-        const result = await pool.query(insertQuery, [
-            adminUsername,
-            hashedPassword,
-            securityQuestion,
-            hashedSecurityAnswer
-        ]);
-
-        console.log("Usuario administrador creado exitosamente");
-        
-        res.json({
-            success: true,
-            message: "Usuario administrador creado exitosamente",
-            data: {
-                username: adminUsername,
-                password: adminPassword, // Mostrar solo en desarrollo
-                note: "¡Guarda esta contraseña en un lugar seguro!"
-            }
-        });
-
-    } catch (error) {
-        console.error("Error creando admin:", error);
-        res.status(500).json({ 
-            success: false,
-            error: "Error interno del servidor" 
-        });
+        console.error("Error en registro:", error);
+        res.status(500).json({ success: false, error: "Error de base de datos", details: error.message });
     }
 });
 
@@ -254,157 +144,7 @@ router.get("/verify-token", verifyToken, async (req, res) => {
     }
 });
 
-// 5. CAMBIAR CONTRASEÑA
-router.post("/change-password", verifyToken, async (req, res) => {
-    try {
-        const { currentPassword, newPassword } = req.body;
-        const username = req.user.username;
-
-        if (!currentPassword || !newPassword) {
-            return res.status(400).json({
-                success: false,
-                error: "La contraseña actual y nueva son requeridas."
-            });
-        }
-
-        if (newPassword.length < 8) {
-            return res.status(400).json({
-                success: false,
-                error: "La nueva contraseña debe tener al menos 8 caracteres."
-            });
-        }
-
-        // Obtener usuario actual
-        const userQuery = `
-            SELECT contraseña FROM usuarios WHERE usuario = $1
-        `;
-        const userResult = await pool.query(userQuery, [username]);
-        
-        if (userResult.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: "Usuario no encontrado."
-            });
-        }
-
-        // Verificar contraseña actual
-        const user = userResult.rows[0];
-        const isValidPassword = await bcrypt.compare(currentPassword, user.contraseña);
-        
-        if (!isValidPassword) {
-            return res.status(401).json({
-                success: false,
-                error: "Contraseña actual incorrecta."
-            });
-        }
-
-        // Encriptar nueva contraseña
-        const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
-
-        // Actualizar en base de datos
-        const updateQuery = `
-            UPDATE usuarios 
-            SET contraseña = $1 
-            WHERE usuario = $2
-        `;
-        
-        await pool.query(updateQuery, [hashedNewPassword, username]);
-
-        res.json({
-            success: true,
-            message: "Contraseña actualizada exitosamente."
-        });
-
-    } catch (error) {
-        console.error("Error cambiando contraseña:", error);
-        res.status(500).json({ 
-            success: false,
-            error: "Error interno del servidor" 
-        });
-    }
-});
-
-// 6. RECUPERAR CONTRASEÑA (con pregunta de seguridad)
-router.post("/forgot-password", async (req, res) => {
-    try {
-        const { username, securityAnswer, newPassword } = req.body;
-
-        if (!username || !securityAnswer || !newPassword) {
-            return res.status(400).json({
-                success: false,
-                error: "Todos los campos son requeridos."
-            });
-        }
-
-        // Obtener usuario y respuesta de seguridad
-        const userQuery = `
-            SELECT respuesta_seguridad, contraseña 
-            FROM usuarios 
-            WHERE usuario = $1
-        `;
-        const userResult = await pool.query(userQuery, [username]);
-        
-        if (userResult.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: "Usuario no encontrado."
-            });
-        }
-
-        const user = userResult.rows[0];
-
-        // Verificar si tiene pregunta de seguridad configurada
-        if (!user.respuesta_seguridad) {
-            return res.status(400).json({
-                success: false,
-                error: "Este usuario no tiene configurada recuperación por pregunta de seguridad."
-            });
-        }
-
-        // Verificar respuesta de seguridad
-        const isValidAnswer = await bcrypt.compare(
-            securityAnswer.toLowerCase(), 
-            user.respuesta_seguridad
-        );
-        
-        if (!isValidAnswer) {
-            return res.status(401).json({
-                success: false,
-                error: "Respuesta de seguridad incorrecta."
-            });
-        }
-
-        // Encriptar nueva contraseña
-        const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
-
-        // Actualizar contraseña
-        const updateQuery = `
-            UPDATE usuarios 
-            SET contraseña = $1 
-            WHERE usuario = $2
-        `;
-        
-        await pool.query(updateQuery, [hashedNewPassword, username]);
-
-        res.json({
-            success: true,
-            message: "Contraseña restablecida exitosamente."
-        });
-
-    } catch (error) {
-        console.error("Error en recuperación de contraseña:", error);
-        res.status(500).json({ 
-            success: false,
-            error: "Error interno del servidor" 
-        });
-    }
-});
-
-// 7. LOGOUT (manejado en frontend, pero puedes invalidar tokens si usas blacklist)
 router.post("/logout", verifyToken, (req, res) => {
-    // En una implementación real, podrías agregar el token a una blacklist
-    // Por ahora, el logout es manejado por el frontend eliminando el token
-    
     res.json({
         success: true,
         message: "Sesión cerrada exitosamente."

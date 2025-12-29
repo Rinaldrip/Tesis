@@ -149,6 +149,7 @@ CREATE TABLE especialistas (
     num_colegio VARCHAR(10) NOT NULL UNIQUE,
     num_mpps VARCHAR(10) NOT NULL UNIQUE,
     direction TEXT
+    is_active BOOLEAN DEFAULT FALSE;
 );
 
 CREATE TABLE calendar_events (

@@ -48,7 +48,7 @@ export default function EventModal({
             start_time: "",
             end_date: "",
             end_time: "",
-            category: "other",
+            category: "otro",
         },
     });
 
@@ -77,7 +77,7 @@ export default function EventModal({
                 start_time: "08:00",
                 end_date: d,
                 end_time: "09:00",
-                category: "other",
+                category: "otro",
             });
         } else {
             form.reset();
@@ -149,11 +149,11 @@ export default function EventModal({
                                                     {...field}
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                                 >
-                                                    <option value="hemodialysis">Hemodialisis</option>
-                                                    <option value="peritoneal_dialysis">Dialisis Peritoneal</option>
-                                                    <option value="controls">Control/Cita</option>
-                                                    <option value="emergencies">Emergencias</option>
-                                                    <option value="other">Otros Eventos</option>
+                                                    <option value="rutina">Rutina</option>
+                                                    <option value="nuevo">Nuevo</option>
+                                                    <option value="critico">Crítico</option>
+                                                    <option value="reunion">Reunión</option>
+                                                    <option value="otro">Otros Eventos</option>
                                                 </select>
                                             </FormControl>
                                             <FormMessage />

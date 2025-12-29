@@ -51,6 +51,16 @@ function PatientProfile() {
         loadPatientData();
     }, [cedula]);
 
+    // Después de cargar los datos, agrega esto:
+    useEffect(() => {
+        if (patientData) {
+            console.log("Datos del Paciente Cargados:", patientData);
+            // Verifica que los datos sean correctos
+            console.log("Paciente:", patientData.paciente);
+            console.log("Laboratorio:", patientData.ultimoLaboratorio);
+        }
+    }, [patientData]);
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -100,10 +110,9 @@ function PatientProfile() {
         datosMedicos,
         contactosEmergencia,
         accesosVasculares,
-        ultimoLaboratorio
+        ultimoLaboratorio,
+        ultimoTratamiento
     } = patientData;
-
-    console.log('Datos del Paciente Cargados:', patientData);
 
     // Obtener el primer contacto de emergencia (si existe el array)
     const contactoEmergencia = contactosEmergencia && contactosEmergencia.length > 0 ? contactosEmergencia[0] : null;
@@ -114,7 +123,7 @@ function PatientProfile() {
     // Laboratorio tiene nombre diferente
     const laboratorio = ultimoLaboratorio;
 
-    const getStatusColor = (status: paciente['estado']) => {
+    const getStatusColor = (status: typeof paciente['estado']) => {
         switch (status) {
             case 'Estable':
                 return 'text-green-600 bg-green-100 border border-green-200';
@@ -131,7 +140,7 @@ function PatientProfile() {
         }
     };
 
-    const getStatusIcon = (status: paciente['estado']) => {
+    const getStatusIcon = (status: typeof paciente['estado']) => {
         switch (status) {
             case 'Estable':
                 return CheckCircle;
@@ -164,14 +173,19 @@ function PatientProfile() {
     const StatusIcon = getStatusIcon(paciente.estado);
 
     const tipoDialisis = (tipo_dialisis: string | undefined | null): string => {
+        if (!tipo_dialisis) return "No tiene Diálisis Asignada";
 
-        switch (tipo_dialisis) {
+        const tipoNormalizado = tipo_dialisis.trim();
+
+        switch (tipoNormalizado) {
             case "Hemodialisis":
+            case "hemodialisis":
                 return "Hemodiálisis";
             case "Peritoneal":
+            case "peritoneal":
                 return "Diálisis Peritoneal";
             default:
-                return "No tiene Diálisis Asignada";
+                return tipo_dialisis; // Devuelve el valor original si no coincide
         }
     }
 
@@ -326,6 +340,10 @@ function PatientProfile() {
                                 <label className="block text-sm font-medium text-gray-500">Causa de Egreso</label>
                                 <p className="text-gray-900">{datosIngreso?.causa_egreso || 'N/A'}</p>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-500">Tratamiento</label>
+                                <p className="text-gray-900">{ultimoTratamiento?.tratamiento || 'N/A'}</p>
+                            </div>
                         </div>
                     </div>
 
@@ -469,6 +487,7 @@ function PatientProfile() {
                     </div>
 
                     {/* Laboratorio de Ingreso */}
+                    {/* Laboratorio de Ingreso */}
                     {laboratorio && (
                         <div className="bg-white rounded-lg shadow-sm p-6 lg:col-span-2">
                             <div className="flex items-center space-x-2 mb-4">
@@ -481,12 +500,23 @@ function PatientProfile() {
                                 {Object.entries(laboratorio).map(([key, value]) => {
                                     if (key === 'fecha' || value === undefined || value === null) return null;
 
+                                    // Asegúrate de que value sea un valor primitivo
+                                    const displayValue = (() => {
+                                        if (typeof value === 'object') {
+                                            return JSON.stringify(value); // Convierte objetos a string
+                                        }
+                                        if (typeof value === 'boolean') {
+                                            return value ? 'Positivo' : 'Negativo';
+                                        }
+                                        return value;
+                                    })();
+
                                     return (
                                         <div key={key} className="text-center p-3 rounded-lg bg-gray-50">
                                             <label className="block text-sm font-medium text-gray-500 uppercase mb-1">
                                                 {key.replace('_', ' ')}
                                             </label>
-                                            <p className="text-lg font-semibold text-gray-900">{value}</p>
+                                            <p className="text-lg font-semibold text-gray-900">{displayValue}</p>
                                         </div>
                                     );
                                 })}

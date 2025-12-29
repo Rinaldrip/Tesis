@@ -13,10 +13,6 @@ import {
 } from 'lucide-react';
 import { api } from "@/services/paciente.api";
 
-/* -------------------------------------------------------------------------- */
-/* Tipos                                   */
-/* -------------------------------------------------------------------------- */
-
 export interface CalendarEvent {
     id: string;
     title: string;
@@ -24,11 +20,11 @@ export interface CalendarEvent {
     start_date: string;
     end_date: string;
     category:
-    | 'hemodialysis'
-    | 'peritoneal_dialysis'
-    | 'controls'
-    | 'emergencies'
-    | 'other';
+    | 'rutina'
+    | 'nuevo'
+    | 'critico'
+    | 'reunion'
+    | 'otro'
 }
 
 const locales = {
@@ -199,30 +195,34 @@ export default function NephrologyCalendar() {
         };
 
         switch (category) {
-            case 'hemodialysis':
-                style.backgroundColor = '#0A1733';
-                style.color = '#D4AF37';
-                style.borderColor = '#D4AF37';
+            case 'rutina': // Verde
+                style.backgroundColor = '#D1FAE5';
+                style.color = '#065F46';
+                style.borderColor = '#10B981';
                 break;
-            case 'peritoneal_dialysis':
-                style.backgroundColor = '#FFF7DF';
-                style.color = '#0A1733';
-                style.borderColor = '#D4AF37';
+
+            case 'nuevo': // Azul
+                style.backgroundColor = '#DBEAFE';
+                style.color = '#1E40AF';
+                style.borderColor = '#3B82F6';
                 break;
-            case 'controls':
-                style.backgroundColor = '#EFE6C9';
-                style.color = '#0A1733';
-                style.borderColor = '#D4AF37';
-                break;
-            case 'emergencies':
+
+            case 'critico': // Rojo
                 style.backgroundColor = '#FEE2E2';
-                style.color = '#7F1D1D';
-                style.borderColor = '#DC2626';
+                style.color = '#991B1B';
+                style.borderColor = '#EF4444';
                 break;
-            case 'other':
-                style.backgroundColor = '#F3F4F6';
-                style.color = '#374151';
-                style.borderColor = '#D4AF37';
+
+            case 'reunion': // Morado
+                style.backgroundColor = '#F3E8FF';
+                style.color = '#6B21A8';
+                style.borderColor = '#A855F7';
+                break;
+
+            case 'otro': // Amarillo
+                style.backgroundColor = '#FEF9C3';
+                style.color = '#854D0E';
+                style.borderColor = '#EAB308';
                 break;
         }
 
@@ -321,11 +321,11 @@ export default function NephrologyCalendar() {
                             <div className="bg-white rounded-lg shadow p-6">
                                 <h3 className="text-lg font-semibold text-[#0A1733] mb-4">Categorías de Eventos</h3>
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                    <LegendItem color="#0A1733" border="#D4AF37" label="Hemodiálisis" />
-                                    <LegendItem color="#FFF7DF" border="#D4AF37" label="Diálisis Peritoneal" />
-                                    <LegendItem color="#EFE6C9" border="#D4AF37" label="Controles" />
-                                    <LegendItem color="#FEE2E2" border="#DC2626" label="Emergencias" />
-                                    <LegendItem color="#F3F4F6" border="#D4AF37" label="Otros" />
+                                    <LegendItem color="#D1FAE5" border="#10B981" label="Rutina" />
+                                    <LegendItem color="#DBEAFE" border="#3B82F6" label="Nuevo" />
+                                    <LegendItem color="#FEE2E2" border="#EF4444" label="Crítico" />
+                                    <LegendItem color="#F3E8FF" border="#A855F7" label="Reunión" />
+                                    <LegendItem color="#FEF9C3" border="#EAB308" label="Otro" />
                                 </div>
                             </div>
                         )}

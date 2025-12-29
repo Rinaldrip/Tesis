@@ -48,8 +48,13 @@ export interface PatientData {
     covid19?: boolean;
   };
 
+  ultimoTratamiento?: {
+    tratamiento?: string;
+  }
+
   // Acceso vascular (estructura anidada)
   accesosVasculares?: {
+    map(arg0: (acceso: any) => any): unknown;
     length: number;
     tipo?: "fistula" | "cateter-per" | "cateter-tem"; // Cambiado de tipoAcceso
     fecha_realizada?: string;         // Cambiado de fechaRealizada
@@ -77,8 +82,4 @@ export interface PatientData {
     ca?: number;
     p?: number;
   };
-  tratamientos?:{
-    tratamiento?:string;
-    fecha?:string;
-  }
 }

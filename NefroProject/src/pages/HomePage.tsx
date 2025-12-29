@@ -57,7 +57,10 @@ export const HomePage = () => {
                 statsData={data.stats}  // data ya no es null/undefined
                 chartData={data.chart}
             />
-            <SpecialistPanel />
+            <SpecialistPanel
+                specialist={data.specialist || null}
+                events={data.events || []}
+            />
             <PatientCarousel
                 patients={data.patients || []}    // Array vacío si no hay pacientes
                 patientsPerPage={3}

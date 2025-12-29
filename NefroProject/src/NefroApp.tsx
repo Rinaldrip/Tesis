@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Search, Bell } from "lucide-react"
+import { Bell } from "lucide-react"
 import Sidebar from "./components/custom/Sidebar"
 import { PatientsPage } from "./pages/Pattient/PatientsPage"
 import { HomePage } from './pages/HomePage';
@@ -15,25 +15,16 @@ const LoadingSpinner = () => (
   </div>
 );
 
-// Componente helper para lazy loading
-const LazyRoute = ({ importFunc }: { importFunc: () => Promise<any> }) => {
-  const LazyComponent = lazy(importFunc);
-  return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <LazyComponent />
-    </Suspense>
-  );
-};
-
-// Lazy imports
-const StatsPage = () => <LazyRoute importFunc={() => import('./pages/Pattient/StatsPage')} />;
-const AppointmentsPage = () => <LazyRoute importFunc={() => import("./pages/CalenderPage")} />;
-const ReportsPage = () => <LazyRoute importFunc={() => import("./pages/ReportsPage")} />;
-const StaffPage = () => <LazyRoute importFunc={() => import("./pages/StaffPage")} />;
-const SettingsPage = () => <LazyRoute importFunc={() => import("./pages/SettingsPage")} />;
-const InfoPattientPage = () => <LazyRoute importFunc={() => import('./pages/Pattient/InfoPattientPage')} />;
-const AddPatientPage = () => <LazyRoute importFunc={() => import('./pages/Pattient/AddPatientPage')} />;
-const EvolutionPage = () => <LazyRoute importFunc={() => import('./pages/Pattient/EvolutionPage')} />;
+// Lazy imports DIRECTOS - sin wrapper LazyRoute
+const EditPatientPage = lazy(() => import('./pages/Pattient/EditPage'));
+const InfoPattientPage = lazy(() => import('./pages/Pattient/InfoPattientPage'));
+const StatsPage = lazy(() => import('./pages/Pattient/StatsPage'));
+const AddPatientPage = lazy(() => import('./pages/Pattient/AddPatientPage'));
+const EvolutionPage = lazy(() => import('./pages/Pattient/EvolutionPage'));
+const AppointmentsPage = lazy(() => import("./pages/CalenderPage"));
+const ReportsPage = lazy(() => import("./pages/ReportsPage"));
+const StaffPage = lazy(() => import("./pages/StaffPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 
 // Hook para verificar autenticación
 const useAuth = () => {
@@ -78,16 +69,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
             <HeaderTitle />
 
             <div className="flex items-center space-x-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Buscar pacientes..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent"
-                />
-              </div>
-
               {/* Notifications */}
               <button className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer">
                 <Bell className="w-5 h-5" />
@@ -132,9 +113,7 @@ function NefroApp() {
 
       <Routes>
         {/* Ruta raíz - redirige según autenticación */}
-        <Route path="/" element={
-          <Navigate to="/login" replace />
-        } />
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
         {/* Ruta pública de login - solo accesible si NO está autenticado */}
         <Route path="/login" element={
@@ -158,62 +137,78 @@ function NefroApp() {
 
         <Route path="/pacientes/add" element={
           <ProtectedRoute>
-            <AddPatientPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <AddPatientPage />
+            </Suspense>
           </ProtectedRoute>
         } />
 
-        <Route path="/pacientes/edit/:id" element={
+        <Route path="/pacientes/:cedula/editar" element={
           <ProtectedRoute>
-            <div>Formulario de editar paciente</div>
+            <Suspense fallback={<LoadingSpinner />}>
+              <EditPatientPage />
+            </Suspense>
           </ProtectedRoute>
         } />
 
         <Route path="/pacientes/:cedula" element={
           <ProtectedRoute>
-            <InfoPattientPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <InfoPattientPage />
+            </Suspense>
           </ProtectedRoute>
         } />
 
         <Route path="/pacientes/:cedula/evo" element={
           <ProtectedRoute>
-            <EvolutionPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <EvolutionPage />
+            </Suspense>
           </ProtectedRoute>
         } />
 
         <Route path="/pacientes/:cedula/stats" element={
           <ProtectedRoute>
-            <StatsPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <StatsPage />
+            </Suspense>
           </ProtectedRoute>
         } />
 
         <Route path="/calendario" element={
           <ProtectedRoute>
-            <AppointmentsPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <AppointmentsPage />
+            </Suspense>
           </ProtectedRoute>
         } />
 
         <Route path="/reportes" element={
           <ProtectedRoute>
-            <ReportsPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <ReportsPage />
+            </Suspense>
           </ProtectedRoute>
         } />
 
         <Route path="/personal" element={
           <ProtectedRoute>
-            <StaffPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <StaffPage />
+            </Suspense>
           </ProtectedRoute>
         } />
 
         <Route path="/configuracion" element={
           <ProtectedRoute>
-            <SettingsPage />
+            <Suspense fallback={<LoadingSpinner />}>
+              <SettingsPage />
+            </Suspense>
           </ProtectedRoute>
         } />
 
         {/* Ruta para manejar 404 - redirige según autenticación */}
-        <Route path="*" element={
-          <Navigate to="/home" replace />
-        } />
+        <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
     </Router>
   );

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import TarjetaEspecialista from '../components/custom/especialista/tarjetaEspecialista';
 import ModalEspecialista from "@/components/custom/especialista/formEspecialista";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Check } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, Stethoscope } from "lucide-react";
 import { api } from "@/services/paciente.api";
 
 // Interface para el especialista
@@ -18,8 +18,7 @@ interface Especialista {
     num_colegio: string;
     num_mpps: string;
     direction: string;
-    created_at?: string;
-    updated_at?: string;
+    is_active: boolean;
 }
 
 // Función para mapear datos del formulario a la base de datos
@@ -34,7 +33,8 @@ const mapFormToDB = (formData: any) => ({
     phone: formData.phone,
     num_colegio: formData.NumColegio,
     num_mpps: formData.NumMpps,
-    direction: formData.direction
+    direction: formData.direction,
+    is_active: formData.isActive || false
 });
 
 // Función para mapear datos de la base de datos al formulario
@@ -49,7 +49,8 @@ const mapDBToForm = (dbData: Especialista) => ({
     phone: dbData.phone,
     NumColegio: dbData.num_colegio,
     NumMpps: dbData.num_mpps,
-    direction: dbData.direction
+    direction: dbData.direction,
+    isActive: dbData.is_active
 });
 
 function StaffPage() {
@@ -112,6 +113,7 @@ function StaffPage() {
         } catch (error: any) {
             console.error('Error adding especialista:', error);
             const errorMessage = error.response?.data?.error || 'Error al agregar especialista';
+            setError(errorMessage);
         }
     };
 
@@ -132,6 +134,7 @@ function StaffPage() {
         } catch (error: any) {
             console.error('Error updating especialista:', error);
             const errorMessage = error.response?.data?.error || 'Error al actualizar especialista';
+            setError(errorMessage);
         }
     };
 
@@ -154,6 +157,7 @@ function StaffPage() {
         } catch (error: any) {
             console.error('Error deleting especialista:', error);
             const errorMessage = error.response?.data?.error || 'Error al eliminar especialista';
+            setError(errorMessage);
         }
     };
 
@@ -170,6 +174,29 @@ function StaffPage() {
         setOpenModal(true);
     };
 
+    const handleSetActive = async () => {
+        if (selectedIndex === null) return;
+        const especialista = staffData[selectedIndex];
+
+        try {
+            setLoading(true);
+            // Llamada al nuevo endpoint
+            const response = await api.put(`/especialista/set-active/${especialista.cedula}`);
+
+            if (response.data.success) {
+                // Recargamos la lista para ver el cambio reflejado visualmente
+                await fetchEspecialistas();
+                setSelectedIndex(null); // Opcional: limpiar selección
+                setSelectMode(false);   // Opcional: salir del modo selección
+            }
+        } catch (error: any) {
+            console.error('Error setting active doctor:', error);
+            setError("No se pudo actualizar el médico en servicio");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleCloseModal = () => {
         setOpenModal(false);
         setEditingEspecialista(null);
@@ -182,6 +209,31 @@ function StaffPage() {
         return undefined;
     };
 
+    // ✅ CORRECCIÓN 1: Función segura para cambiar el modo
+    const toggleSelectMode = () => {
+        if (selectMode) {
+            // Si estaba activo y lo vamos a desactivar, limpiamos la selección y apagamos el modo
+            setSelectedIndex(null);
+            setSelectMode(false);
+        } else {
+            // Si estaba inactivo, solo lo encendemos
+            setSelectMode(true);
+        }
+    };
+
+    // ✅ CORRECCIÓN 2: Función para seleccionar/deseleccionar tarjeta
+    const handleCardClick = (index: number) => {
+        if (!selectMode) return; // Si no está en modo selección, no hace nada
+
+        if (selectedIndex === index) {
+            // Si toco la misma tarjeta que ya tenía, la deselecciono
+            setSelectedIndex(null);
+        } else {
+            // Selecciono la nueva
+            setSelectedIndex(index);
+        }
+    };
+
     return (
         <div className="my-5">
             <h1 className="text-3xl font-bold text-blue-900 mb-6 text-center">
@@ -192,6 +244,7 @@ function StaffPage() {
             </p>
             {/* HEADER BUTTONS */}
             <div className='flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4'>
+                {/* Botón Añadir (Igual) */}
                 <Button
                     className="h-12 bg-blue-900 text-white hover:bg-blue-800"
                     onClick={handleOpenModal}
@@ -201,13 +254,10 @@ function StaffPage() {
                     Añadir Especialista
                 </Button>
 
-
+                {/* ✅ CORRECCIÓN 3: Usar la nueva función toggleSelectMode */}
                 <Button
                     className={`h-12 ${selectMode ? "bg-amber-600 hover:bg-amber-500" : "bg-gray-700 hover:bg-gray-600"} text-white`}
-                    onClick={() => {
-                        setSelectMode(!selectMode);
-                        if (!selectMode) setSelectedIndex(null);
-                    }}
+                    onClick={toggleSelectMode}
                     disabled={loading || staffData.length === 0}
                 >
                     {selectMode ? (
@@ -219,8 +269,18 @@ function StaffPage() {
                     )}
                 </Button>
 
+                {/* Botones de Editar/Eliminar (Igual) */}
                 {selectedIndex !== null && (
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 animate-in fade-in slide-in-from-left-4 duration-300">
+                        {/* 4. Nuevo Botón: Médico en Servicio */}
+                        <Button
+                            className="h-12 bg-indigo-600 text-white hover:bg-indigo-500"
+                            onClick={handleSetActive}
+                        >
+                            <Stethoscope className="h-4 w-4 mr-2" />
+                            Médico en Servicio
+                        </Button>
+
                         <Button
                             className="h-12 bg-green-700 text-white hover:bg-green-600"
                             onClick={handleEdit}
@@ -248,20 +308,6 @@ function StaffPage() {
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                             </svg>
                         </div>
-                        <div className="ml-3">
-                            <h3 className="text-sm font-medium text-red-800">Error de conexión</h3>
-                            <p className="text-sm text-red-700 mt-1">{error}</p>
-                            <div className="mt-2">
-                                <p className="text-sm text-red-600">
-                                    <strong>Para solucionar:</strong>
-                                </p>
-                                <ul className="text-sm text-red-600 list-disc list-inside mt-1">
-                                    <li>Asegúrate de que el servidor esté ejecutándose en el puerto 4000</li>
-                                    <li>Verifica que la variable VITE_API_URL esté configurada correctamente</li>
-                                    <li>Revisa que no haya errores en la consola del servidor</li>
-                                </ul>
-                            </div>
-                        </div>
                     </div>
                 </div>
             )}
@@ -286,18 +332,29 @@ function StaffPage() {
                     {staffData.map((especialista, index) => {
                         const isSelected = index === selectedIndex;
                         const tarjetaData = mapDBToForm(especialista);
+                        const isActiveDoctor = especialista.is_active;
 
                         return (
                             <div
                                 key={especialista.cedula}
-                                onClick={() => selectMode && setSelectedIndex(index)}
+                                onClick={() => handleCardClick(index)}
                                 className={`
-                                    transition-all rounded-2xl
-                                    ${selectMode ? "cursor-pointer" : ""}
-                                    ${isSelected ? "ring-4 ring-amber-500" : "ring-0"}
-                                    ${selectMode && !isSelected ? "hover:ring-2 hover:ring-gray-400" : ""}
+                                    transition-all duration-200 rounded-2xl relative
+                                    ${selectMode ? "cursor-pointer hover:scale-[1.02]" : ""}
+                                    ${isSelected ? "ring-4 ring-amber-500 shadow-lg scale-[1.02]" : "ring-0"}
+                                    ${/* Estilo especial para el médico activo */ isActiveDoctor && !isSelected ? "ring-2 ring-indigo-500 bg-indigo-50/30" : ""}
                                 `}
                             >
+                                {/* Badge/Etiqueta visual para saber quién es el activo */}
+                                {isActiveDoctor && (
+                                    <div className="absolute -top-3 right-4 bg-indigo-600 text-white text-xs px-3 py-1 rounded-full shadow-md z-20 flex items-center gap-1">
+                                        <Stethoscope size={12} /> En Servicio
+                                    </div>
+                                )}
+
+                                {selectMode && (
+                                    <div className="absolute inset-0 z-10 rounded-2xl" />
+                                )}
                                 <TarjetaEspecialista data={tarjetaData} />
                             </div>
                         );
